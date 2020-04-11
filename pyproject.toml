@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "alexofechoes_pageloader"
+version = "0.1.0"
+description = "Page Loader - hexlet third project"
+authors = ["Alexander Bukharin <alexawm182@gmail.com>"]
+packages = [
+    { include = "pageloader" },
+]
+repository = "https://github.com/alexofechoes/python-project-lvl3"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+requests = "^2.23.0"
+
+[tool.poetry.dev-dependencies]
+black = "^19.10b0"
+flake8 = "^3.7.9"
+isort = "^4.3.21"
+mypy = "^0.770"
+pytest = "^5.2"
+pytest-cov = "^2.8.1"
+wemake-python-styleguide = "^0.14.0"
+requests-mock = "^1.7.0"
+
+[tool.poetry.scripts]
+pageloader = "pageloader.cli:main"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

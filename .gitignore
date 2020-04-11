@@ -1,0 +1,10 @@
+.coverage
+.mypy_cache
+.pytest_cache
+.python-version
+.vscode
+/dist
+__pycache__
+*.egg-info
+*.pyc
+coverage.xml
