@@ -6,14 +6,15 @@ from urllib.parse import urljoin
 import requests
 
 from pageloader import helpers, parsers
+from pageloader.saver import FileSaver
 
 
 class Loader:
     """Page loader."""
 
-    def __init__(self, logger, save_func=None, fetch_func=None):  # noqa D107
+    def __init__(self, logger, saver=None, fetch_func=None):  # noqa D107
         self.logger = logger
-        self.save_func = save_func or _save_to_file
+        self.saver = saver or FileSaver()
         self.fetch_func = fetch_func or _fetch_content
 
     def __call__(self, url: str, path_to_save_dir: str):
@@ -22,42 +23,43 @@ class Loader:
 
     def load(self, url: str, path_to_save_dir: str):
         """Save page with resources from url."""
-        self.logger.info('fetching page content')
-        page_content = self.fetch_func(url)
+        self.logger.info('Fetching page content')
+        page_content = self.fetch_func(url, self.logger)
         resource_dir_name = helpers.get_resource_dir_name_from_url(url)
 
-        self.logger.debug('start search resources on page')
-        links, content_for_save = parsers.parse_page_content(
-            page_content, resource_dir_name, helpers.get_resource_name_from_url,
-        )
+        self.logger.debug('Start search resources on page')
+        try:
+            links, content_for_save = parsers.parse_page_content(
+                page_content,
+                resource_dir_name,
+                helpers.get_resource_name_from_url,
+            )
+        except Exception as parse_err:
+            self.logger.error('Parse resource page err: {err}'.format(
+                err=str(parse_err),
+            ))
+            raise parse_err
 
-        self.logger.info('saving page')
+        self.logger.info('Saving page')
         file_name = helpers.get_file_name_from_url(url)
-        try:
-            self._save_page_content(
-                file_name, path_to_save_dir, content_for_save,
-            )
-        except Exception as file_save_err:
-            self.logger.critical('saving page error: : {err}'.format(
-                err=str(file_save_err),
-            ))
-            raise file_save_err
+        self._save_page_content(file_name, path_to_save_dir, content_for_save)
 
-        try:
-            self._load_and_save_page_resources(
-                links, url, path_to_save_dir, resource_dir_name,
-            )
-        except Exception as resources_save_err:
-            self.logger.critical('saving resources error: {err}'.format(
-                err=str(resources_save_err),
-            ))
-            raise resources_save_err
+        self.logger.info('Saving resources')
+        self._load_and_save_page_resources(
+            links, url, path_to_save_dir, resource_dir_name,
+        )
 
     def _save_page_content(
         self, file_name: str, path_to_save_dir: str, page_content: str,
     ):
         path_to_save_file = os.path.join(path_to_save_dir, file_name)
-        self.save_func(page_content, path_to_save_file)
+        try:
+            self.saver.save(page_content, path_to_save_file)
+        except Exception as save_page_err:
+            self.logger.critical('Save page error: {err}'.format(
+                err=save_page_err,
+            ))
+            raise save_page_err
 
     def _load_and_save_page_resources(
         self,
@@ -67,22 +69,35 @@ class Loader:
         resource_dir_name: str,
     ):
         path_to_resource_dir = os.path.join(path_to_save_dir, resource_dir_name)
-        # extract create dir in saver object
-        if not os.path.exists(path_to_resource_dir):
-            os.mkdir(path_to_resource_dir)
+        try:
+            self.saver.create_dir(path_to_resource_dir)
+        except Exception as create_dir_err:
+            self.logger.critical('Create resource dir error: {err}'.format(
+                err=create_dir_err,
+            ))
+            raise create_dir_err
 
         for link, name_for_save in links_for_upload.items():
-            file_content = _fetch_content(urljoin(base_url, link))
+            file_content = self.fetch_func(urljoin(base_url, link), self.logger)
             path_to_file = os.path.join(path_to_resource_dir, name_for_save)
-            self.save_func(file_content, path_to_file)
+
+            try:
+                self.saver.save(file_content, path_to_file)
+            except Exception as save_resource_err:
+                self.logger.error('Saving resource error: {err}'.format(
+                    err=save_resource_err,
+                ))
+                raise save_resource_err
 
 
-def _fetch_content(url: str) -> bytes:
-    response = requests.get(url)
+def _fetch_content(url: str, logger) -> bytes:
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as fetch_err:
+        logger.critical('Fetch resource {url} error: {err}'.format(
+            url=url,
+            err=fetch_err,
+        ))
+        raise fetch_err
     return response.content
-
-
-def _save_to_file(content_for_save, path_to_save: str):
-    mode = 'w' if isinstance(content_for_save, str) else 'wb'
-    with open(path_to_save, mode) as file_descriptor:
-        file_descriptor.write(content_for_save)

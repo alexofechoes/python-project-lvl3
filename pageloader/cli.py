@@ -3,6 +3,7 @@
 """Cli module."""
 import argparse
 import logging
+import sys
 
 from pageloader.loader import Loader
 
@@ -41,6 +42,7 @@ def main():
         print('Page load success')
     except Exception: # noqa DAR401
         print('Page load errors')
+        sys.exit(1)
 
 
 if __name__ == '__main__':

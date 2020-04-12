@@ -23,7 +23,7 @@ def parse_page_content(page_content, resource_dir_name, name_mapping_func): # no
             is_download_resourse = (
                 link and link.startswith('/') and os.path.splitext(link)[-1]
             )
-            if (is_download_resourse):
+            if is_download_resourse:
                 replace_path = name_mapping_func(link)
                 node[_TAGS_WITH_LINK_ATTR[tag]] = '{dir}/{path}'.format(
                     dir=resource_dir_name,
