@@ -14,4 +14,4 @@ analyze:
 	poetry run mypy pageloader
 
 test-publish:
-	poetry publish -r testpypi
+	poetry publish -r testpypi --build

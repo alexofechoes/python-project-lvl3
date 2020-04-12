@@ -33,13 +33,13 @@ def test_save_url(): # noqa WPS210
 
 def _get_content_data():
     return """
-    <!DOCTYPE html>
-    <html lang='ru'>
-        <head>
-            <title>test test</title>
-        </head>
-        <body>
-            <p>test content</p>
-        </body>
-    </html>
-    """
+<!DOCTYPE html>
+
+<html lang="ru">
+<head>
+<title>test test</title>
+</head>
+<body>
+<p>test content</p>
+</body>
+</html>"""
