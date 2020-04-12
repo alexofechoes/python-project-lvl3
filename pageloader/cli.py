@@ -2,8 +2,13 @@
 
 """Cli module."""
 import argparse
+import logging
 
-from pageloader import loader
+from pageloader.loader import Loader
+
+LOGGER_FORMAT = '%(asctime)s %(message)s'
+logging.basicConfig(format=LOGGER_FORMAT)
+
 
 parser = argparse.ArgumentParser(description='Page Loader')
 parser.add_argument(
@@ -11,7 +16,14 @@ parser.add_argument(
     '--output',
     dest='OUTPUT_DIR',
     default='.',
-    help='set output dir',
+    help='set output dir (default current dir)',
+)
+parser.add_argument(
+    '-l',
+    '--loglevel',
+    dest='LOGLEVEL',
+    default='WARNING',
+    help='set logging level(default WARNING)',
 )
 parser.add_argument('url', metavar='URL')
 
@@ -19,7 +31,16 @@ parser.add_argument('url', metavar='URL')
 def main():
     """Run cli."""
     args = parser.parse_args()
-    loader.save_page_content(args.url, args.OUTPUT_DIR)
+
+    logger = logging.getLogger('pageloader')
+    logger.setLevel(args.LOGLEVEL)
+
+    loader = Loader(logger)
+    try:
+        loader.load(args.url, args.OUTPUT_DIR)
+        print('Page load success')
+    except Exception:
+        print('Page load errors')
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "alexofechoes_pageloader"
-version = "0.1.0"
+version = "0.3.0"
 description = "Page Loader - hexlet third project"
 authors = ["Alexander Bukharin <alexawm182@gmail.com>"]
 packages = [

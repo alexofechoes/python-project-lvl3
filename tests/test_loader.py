@@ -1,11 +1,14 @@
 # -*- coding:utf-8 -*-
+import logging
 import os
 import tempfile
 
 import pytest
 import requests_mock
 
-from pageloader import loader
+from pageloader.loader import Loader
+
+logger = logging.getLogger(__name__)
 
 
 def test_save_url(): # noqa WPS210
@@ -19,7 +22,8 @@ def test_save_url(): # noqa WPS210
             empty_dir = os.listdir(tmpdirname)
             assert len(empty_dir) == 0
 
-            loader.save_page_content(url, tmpdirname)
+            loader = Loader(logger)
+            loader.load(url, tmpdirname)
             assert len(os.listdir(tmpdirname)) != 0
 
             files_path = [
