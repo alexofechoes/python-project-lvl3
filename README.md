@@ -4,7 +4,7 @@
 
 ### Installation
 ```bash
-$ pip3 install --user --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple alexofechoes_pageloader
+$ pip3 install --user --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple alexofechoes-pageloader
 ```
 
 
