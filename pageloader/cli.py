@@ -6,7 +6,7 @@ import logging
 
 from pageloader.loader import Loader
 
-LOGGER_FORMAT = '%(asctime)s %(message)s'
+LOGGER_FORMAT = '%(asctime)s %(message)s' # noqa WPS323
 logging.basicConfig(format=LOGGER_FORMAT)
 
 
@@ -39,7 +39,7 @@ def main():
     try:
         loader.load(args.url, args.OUTPUT_DIR)
         print('Page load success')
-    except Exception:
+    except Exception: # noqa DAR401
         print('Page load errors')
 
 
