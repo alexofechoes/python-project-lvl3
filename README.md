@@ -12,3 +12,5 @@ $ pip3 install --user --index-url https://test.pypi.org/simple/ --extra-index-ur
 ```bash
 $ pageloader https://hexlet.io/courses --output=/path/to/dir
 ```
+[![asciicast](https://asciinema.org/a/l7w7uWfIx5eWxTNAdOHNWNgrf.svg)](https://asciinema.org/a/l7w7uWfIx5eWxTNAdOHNWNgrf)
+[![asciicast](https://asciinema.org/a/C3oy3VUUuiPexWmB5eJPxveDO.svg)](https://asciinema.org/a/C3oy3VUUuiPexWmB5eJPxveDO)
