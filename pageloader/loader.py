@@ -55,7 +55,7 @@ class Loader:
         path_to_save_file = os.path.join(path_to_save_dir, file_name)
         try:
             self.saver.save(page_content, path_to_save_file)
-        except Exception as save_page_err:
+        except OSError as save_page_err:
             self.logger.critical('Save page error: {err}'.format(
                 err=save_page_err,
             ))
@@ -71,7 +71,7 @@ class Loader:
         path_to_resource_dir = os.path.join(path_to_save_dir, resource_dir_name)
         try:
             self.saver.create_dir(path_to_resource_dir)
-        except Exception as create_dir_err:
+        except OSError as create_dir_err:
             self.logger.critical('Create resource dir error: {err}'.format(
                 err=create_dir_err,
             ))
@@ -83,7 +83,7 @@ class Loader:
 
             try:
                 self.saver.save(file_content, path_to_file)
-            except Exception as save_resource_err:
+            except OSError as save_resource_err:
                 self.logger.error('Saving resource error: {err}'.format(
                     err=save_resource_err,
                 ))
@@ -94,7 +94,7 @@ def _fetch_content(url: str, logger) -> bytes:
     try:
         response = requests.get(url)
         response.raise_for_status()
-    except requests.exceptions.HTTPError as fetch_err:
+    except requests.exceptions.RequestException as fetch_err:
         logger.critical('Fetch resource {url} error: {err}'.format(
             url=url,
             err=fetch_err,
