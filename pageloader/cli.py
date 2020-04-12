@@ -5,6 +5,8 @@ import argparse
 import logging
 import sys
 
+from progress.bar import Bar
+
 from pageloader.loader import Loader
 
 LOGGER_FORMAT = '%(asctime)s %(message)s' # noqa WPS323
@@ -36,13 +38,15 @@ def main():
     logger = logging.getLogger('pageloader')
     logger.setLevel(args.LOGLEVEL)
 
-    loader = Loader(logger)
+    progress_bar = Bar('Progress', max=5)
+    loader = Loader(logger, progress_bar)
     try:
         loader.load(args.url, args.OUTPUT_DIR)
-        print('Page load success')
     except Exception: # noqa DAR401
         print('Page load errors')
         sys.exit(1)
+    progress_bar.finish()
+    print('Page load success')
 
 
 if __name__ == '__main__':

@@ -12,8 +12,9 @@ from pageloader.saver import FileSaver
 class Loader:
     """Page loader."""
 
-    def __init__(self, logger, saver=None, fetch_func=None):  # noqa D107
+    def __init__(self, logger, progress=None, saver=None, fetch_func=None):  # noqa D107
         self.logger = logger
+        self.progress = progress or FakeProgress
         self.saver = saver or FileSaver()
         self.fetch_func = fetch_func or _fetch_content
 
@@ -21,12 +22,15 @@ class Loader:
         """Save page with resources from url."""
         self.load(url)
 
-    def load(self, url: str, path_to_save_dir: str):
+    def load(self, url: str, path_to_save_dir: str): # noqa WPS213
         """Save page with resources from url."""
+        self.progress.next()
         self.logger.info('Fetching page content')
+
         page_content = self.fetch_func(url, self.logger)
         resource_dir_name = helpers.get_resource_dir_name_from_url(url)
 
+        self.progress.next()
         self.logger.debug('Start search resources on page')
         try:
             links, content_for_save = parsers.parse_page_content(
@@ -40,14 +44,18 @@ class Loader:
             ))
             raise parse_err
 
+        self.progress.next()
         self.logger.info('Saving page')
         file_name = helpers.get_file_name_from_url(url)
         self._save_page_content(file_name, path_to_save_dir, content_for_save)
 
+        self.progress.next()
         self.logger.info('Saving resources')
         self._load_and_save_page_resources(
             links, url, path_to_save_dir, resource_dir_name,
         )
+
+        self.progress.next()
 
     def _save_page_content(
         self, file_name: str, path_to_save_dir: str, page_content: str,
@@ -101,3 +109,9 @@ def _fetch_content(url: str, logger) -> bytes:
         ))
         raise fetch_err
     return response.content
+
+
+class FakeProgress: # noqa
+    @staticmethod # noqa
+    def next(): # noqa
+        return None
