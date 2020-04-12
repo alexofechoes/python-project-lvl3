@@ -45,7 +45,8 @@ def main():
     except Exception: # noqa DAR401
         print('Page load errors')
         sys.exit(1)
-    progress_bar.finish()
+    finally:
+        progress_bar.finish()
     print('Page load success')
 
 
