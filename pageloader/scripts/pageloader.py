@@ -1,32 +1,31 @@
 # -*- coding:utf-8 -*-
 
-"""Cli module."""
+"""Main cli script."""
 import argparse
 import logging
 import sys
 
-from progress.bar import Bar
-
-from pageloader.loader import Loader
+from pageloader import loader
 
 LOGGER_FORMAT = '%(asctime)s %(message)s' # noqa WPS323
 logging.basicConfig(format=LOGGER_FORMAT)
-
+logger = logging.getLogger('pageloader')
 
 parser = argparse.ArgumentParser(description='Page Loader')
 parser.add_argument(
     '-o',
     '--output',
-    dest='OUTPUT_DIR',
+    dest='output_dir',
     default='.',
     help='set output dir (default current dir)',
 )
 parser.add_argument(
     '-l',
     '--loglevel',
-    dest='LOGLEVEL',
-    default='WARNING',
-    help='set logging level(default WARNING)',
+    dest='loglevel',
+    default='INFO',
+    help='set logging level(default INFO)',
+    choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
 )
 parser.add_argument('url', metavar='URL')
 
@@ -34,20 +33,17 @@ parser.add_argument('url', metavar='URL')
 def main():
     """Run cli."""
     args = parser.parse_args()
+    logger.setLevel(args.loglevel)
 
-    logger = logging.getLogger('pageloader')
-    logger.setLevel(args.LOGLEVEL)
-
-    progress_bar = Bar('Progress', max=5)
-    loader = Loader(logger, progress_bar)
     try:
-        loader.load(args.url, args.OUTPUT_DIR)
-    except Exception: # noqa DAR401
-        print('Page load errors')
+        loader.load(
+            args.url,
+            args.output_dir,
+        )
+    except loader.LoaderError:
+        logger.error('Page load errors')
         sys.exit(1)
-    finally:
-        progress_bar.finish()
-    print('Page load success')
+    logger.warning('Page load success')
 
 
 if __name__ == '__main__':

@@ -19,7 +19,7 @@ before_script:
   - ./cc-test-reporter before-build
 script:
   - make lint
-  # - make analyze
+  - make analyze
   - make test-with-coverage
 after_script:
   - ./cc-test-reporter format-coverage -d -t coverage.py coverage.xml after-build $TRAVIS_TEST_RESULT

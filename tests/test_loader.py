@@ -7,24 +7,23 @@ import pytest
 import requests
 import requests_mock
 
-from pageloader.loader import Loader
+import pageloader
+from pageloader import loader
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('pageloader')
+
+_RESOURCE_URL = 'https://test.test/user/test/main-page/'
 
 
-def test_save_url(): # noqa WPS210
-    url = 'https://test.test/user/test/main-page/'
-    content = _get_content_data()
-
+def test_save_url(simple_page_content): # noqa WPS210
     with requests_mock.Mocker() as mock:
-        mock.get(url, text=content)
+        mock.get(_RESOURCE_URL, text=simple_page_content)
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             empty_dir = os.listdir(tmpdirname)
             assert len(empty_dir) == 0
 
-            loader = Loader(logger)
-            loader.load(url, tmpdirname)
+            loader.load(_RESOURCE_URL, tmpdirname)
             assert len(os.listdir(tmpdirname)) != 0
 
             files_path = [
@@ -33,38 +32,56 @@ def test_save_url(): # noqa WPS210
             ]
             with open(files_path[0], 'r') as file_descriptor:
                 file_content = file_descriptor.read()
-                assert file_content == content
+                assert file_content == simple_page_content
 
 
 def test_save_url_with_fetch_exception():
-    url = 'https://test.test/user/test/main-page/'
     with tempfile.TemporaryDirectory() as tmpdirname:
-        with pytest.raises(requests.exceptions.RequestException):
-            loader = Loader(logger)
-            loader.load(url, tmpdirname)
+        with pytest.raises(loader.LoaderError):
+            loader.load(_RESOURCE_URL, tmpdirname)
 
 
-def test_save_url_with_tmpdir_err():
-    url = 'https://test.test/user/test/main-page/'
-
+def test_save_url_with_tmpdir_err(simple_page_content):
     with requests_mock.Mocker() as mock:
-        mock.get(url, text=_get_content_data())
+        mock.get(_RESOURCE_URL, text=simple_page_content)
         with tempfile.TemporaryDirectory() as tmpdirname:
-            with pytest.raises(FileNotFoundError):
-                loader = Loader(logger)
+            with pytest.raises(loader.LoaderError):
                 fake_dir = '{tmpdir}_fake_34213'.format(tmpdir=tmpdirname)
-                loader.load(url, fake_dir)
+                loader.load(_RESOURCE_URL, fake_dir)
 
 
-def _get_content_data():
-    return """
-<!DOCTYPE html>
+_expected_links = {
+    '/assets/js/main.js': 'assets-js-main.js',
+    '/css/styles.css': 'css-styles.css',
+    '/image.png': 'image.png',
+}
 
-<html lang="ru">
-<head>
-<title>test test</title>
-</head>
-<body>
-<p>test content</p>
-</body>
-</html>"""
+
+def test_get_resource_links(page_with_links_content):
+    resource_dir_name = 'test-resource-dir_files'
+
+    links_for_upload, replace_content = loader._get_resource_links(
+        page_with_links_content, resource_dir_name,
+    )
+
+    assert _expected_links == links_for_upload
+    for path in links_for_upload.values():
+        expected_link = '{dir}/{path}'.format(dir=resource_dir_name, path=path)
+        assert expected_link in replace_content
+
+
+@pytest.mark.parametrize(
+    'link,expected',
+    [
+        ('/assets/main.js', True),
+        ('/assets/styles.css', True),
+        ('/static/logo.png', True),
+        ('https://cdn2.domain.io/dist.js', False),
+        ('/user/info', False),
+        ('', False),
+        (' ', False),
+    ],
+)
+def test_is_downloadable_resource(link, expected):
+    result = loader._is_downloadable_resource(link)
+    assert result == expected
