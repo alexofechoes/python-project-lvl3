@@ -1,7 +1,9 @@
 # -*- coding:utf-8 -*-
+
 """Module with requests."""
 import logging
 import os
+from typing import Union
 from urllib.parse import urljoin
 
 import requests
@@ -27,49 +29,41 @@ def load(url: str, path_to_save_dir: str):  # noqa WPS213
         resource_dir_name,
     )
 
-    progress = Bar('Progress', max=len(links) + 2)
+    with Bar('Progress', max=len(links) + 2) as progress:
+        logger.debug('Saving page')
+        file_name = pageloader.url.to_filename(url)
+        path_to_save_file = os.path.join(path_to_save_dir, file_name)
+        _save_content(content_for_save, path_to_save_file)
+        progress.next()
 
-    progress.next()
-    logger.debug('Saving page')
-    file_name = pageloader.url.to_filename(url)
-    _save_page_content(file_name, path_to_save_dir, content_for_save)
+        logger.debug('Create resources directory')
+        path_to_resources_dir = os.path.join(
+            path_to_save_dir,
+            resource_dir_name,
+        )
+        _create_resources_directory(path_to_resources_dir)
+        progress.next()
 
-    progress.next()
-    logger.debug('Saving resources')
-    _load_and_save_page_resources(
-        links,
-        url,
-        path_to_save_dir,
-        resource_dir_name,
-        progress=progress,
-    )
-
-    progress.finish()
+        logger.debug('Saving resources')
+        _download_resources(
+            links,
+            url,
+            path_to_resources_dir,
+            on_progress=progress.next,
+        )
 
 
-def _save_page_content(
-    file_name: str,
-    path_to_save_dir: str,
-    page_content: str,
-):
-    path_to_save_file = os.path.join(path_to_save_dir, file_name)
+def _save_content(content_for_save: Union[str, bytes], path_to_file: str):
     try:
-        storage.save(page_content, path_to_save_file)
-    except OSError as save_page_err:
-        logger.error('Save page error: {err}'.format(
-            err=save_page_err,
+        storage.save(content_for_save, path_to_file)
+    except OSError as save_err:
+        logger.error('Save error: {err}'.format(
+            err=save_err,
         ))
-        raise LoaderError() from save_page_err
+        raise LoaderError() from save_err
 
 
-def _load_and_save_page_resources(  # noqa WPS211
-    links_for_upload,
-    base_url: str,
-    path_to_save_dir: str,
-    resource_dir_name: str,
-    progress,
-):
-    path_to_resource_dir = os.path.join(path_to_save_dir, resource_dir_name)
+def _create_resources_directory(path_to_resource_dir: str):
     try:
         storage.create_dir(path_to_resource_dir)
     except OSError as create_dir_err:
@@ -80,19 +74,18 @@ def _load_and_save_page_resources(  # noqa WPS211
         )
         raise LoaderError() from create_dir_err
 
-    for link, name_for_save in links_for_upload.items():
+
+def _download_resources(  # noqa WPS211
+    links,
+    base_url: str,
+    path_to_resources_dir: str,
+    on_progress=lambda: None, # noqa WPS404
+):
+    for link, name_for_save in links.items():
         file_content = _fetch_content(urljoin(base_url, link))
-        path_to_file = os.path.join(path_to_resource_dir, name_for_save)
-        progress.next()
-        try:
-            storage.save(file_content, path_to_file)
-        except OSError as save_resource_err:
-            logger.error(
-                'Saving resource error: {err}'.format(
-                    err=save_resource_err,
-                ),
-            )
-            raise LoaderError() from save_resource_err
+        path_to_file = os.path.join(path_to_resources_dir, name_for_save)
+        _save_content(file_content, path_to_file)
+        on_progress()
 
 
 def _fetch_content(url: str) -> bytes:
@@ -110,7 +103,7 @@ def _fetch_content(url: str) -> bytes:
     return response.content
 
 
-_tag2attr = [
+TAG_URL_ATTRIBUTES = [ # noqa WPS407
     ('script', 'src'),
     ('link', 'href'),
     ('img', 'src'),
@@ -118,29 +111,29 @@ _tag2attr = [
 
 
 def _get_resource_links(page_content, resource_dir_name): # noqa WPS210
-    """Find links for upload."""
+    """Find resource links."""
     soup = BeautifulSoup(page_content, 'html.parser')
 
-    links_for_upload = {}
-    for tag, attr in _tag2attr:
+    links = {}
+    for tag, attr in TAG_URL_ATTRIBUTES:
         for node in soup.find_all(tag):
             link = node.get(attr)
-            if _is_downloadable_resource(link):
+            if need_to_be_downloaded(link):
                 resource_path = pageloader.url.to_resource(link)
                 node[attr] = '{dir}/{path}'.format(
                     dir=resource_dir_name,
                     path=resource_path,
                 )
-                links_for_upload[link] = resource_path
+                links[link] = resource_path
 
-    return links_for_upload, str(soup)
+    return links, str(soup)
 
 
-def _is_downloadable_resource(link: str) -> bool:
-    if not link:
+def need_to_be_downloaded(link: str) -> bool:
+    """Check needable downloaded resource."""
+    if link is None:
         return False
-    resource_extension = os.path.splitext(link)[-1]
-    return link.startswith('/') and resource_extension != ''
+    return link.startswith('/') and os.path.splitext(link)[-1] != ''
 
 
 class LoaderError(Exception):

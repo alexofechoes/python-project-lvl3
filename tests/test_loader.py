@@ -1,5 +1,4 @@
 # -*- coding:utf-8 -*-
-import logging
 import os
 import tempfile
 
@@ -10,27 +9,24 @@ import requests_mock
 import pageloader
 from pageloader import loader
 
-logger = logging.getLogger('pageloader')
-
-_RESOURCE_URL = 'https://test.test/user/test/main-page/'
+RESOURCE_URL = 'https://test.test/user/test/main-page/'
 
 
 def test_save_url(simple_page_content): # noqa WPS210
     with requests_mock.Mocker() as mock:
-        mock.get(_RESOURCE_URL, text=simple_page_content)
+        mock.get(RESOURCE_URL, text=simple_page_content)
 
         with tempfile.TemporaryDirectory() as tmpdirname:
-            empty_dir = os.listdir(tmpdirname)
-            assert len(empty_dir) == 0
-
-            loader.load(_RESOURCE_URL, tmpdirname)
+            loader.load(RESOURCE_URL, tmpdirname)
             assert len(os.listdir(tmpdirname)) != 0
 
             files_path = [
                 os.path.join(tmpdirname, file_name)
                 for file_name in os.listdir(tmpdirname)
             ]
-            with open(files_path[0], 'r') as file_descriptor:
+            file_path, = list(filter(os.path.isfile, files_path))
+
+            with open(file_path, 'r') as file_descriptor:
                 file_content = file_descriptor.read()
                 assert file_content == simple_page_content
 
@@ -38,19 +34,19 @@ def test_save_url(simple_page_content): # noqa WPS210
 def test_save_url_with_fetch_exception():
     with tempfile.TemporaryDirectory() as tmpdirname:
         with pytest.raises(loader.LoaderError):
-            loader.load(_RESOURCE_URL, tmpdirname)
+            loader.load(RESOURCE_URL, tmpdirname)
 
 
 def test_save_url_with_tmpdir_err(simple_page_content):
     with requests_mock.Mocker() as mock:
-        mock.get(_RESOURCE_URL, text=simple_page_content)
+        mock.get(RESOURCE_URL, text=simple_page_content)
         with tempfile.TemporaryDirectory() as tmpdirname:
             with pytest.raises(loader.LoaderError):
                 fake_dir = '{tmpdir}_fake_34213'.format(tmpdir=tmpdirname)
-                loader.load(_RESOURCE_URL, fake_dir)
+                loader.load(RESOURCE_URL, fake_dir)
 
 
-_expected_links = {
+EXPECTED_LINKS = { # noqa WPS407
     '/assets/js/main.js': 'assets-js-main.js',
     '/css/styles.css': 'css-styles.css',
     '/image.png': 'image.png',
@@ -60,13 +56,13 @@ _expected_links = {
 def test_get_resource_links(page_with_links_content):
     resource_dir_name = 'test-resource-dir_files'
 
-    links_for_upload, replace_content = loader._get_resource_links(
+    links, replace_content = loader._get_resource_links(
         page_with_links_content, resource_dir_name,
     )
 
-    assert _expected_links == links_for_upload
-    for path in links_for_upload.values():
-        expected_link = '{dir}/{path}'.format(dir=resource_dir_name, path=path)
+    assert EXPECTED_LINKS == links
+    for path in links.values():
+        expected_link = os.path.join(resource_dir_name, path)
         assert expected_link in replace_content
 
 
@@ -82,6 +78,6 @@ def test_get_resource_links(page_with_links_content):
         (' ', False),
     ],
 )
-def test_is_downloadable_resource(link, expected):
-    result = loader._is_downloadable_resource(link)
+def test_need_to_be_downloaded(link, expected):
+    result = loader.need_to_be_downloaded(link)
     assert result == expected
